@@ -1,0 +1,121 @@
+/*Query1 - First Insight - Video File Downloads by Artist Purchased*/
+SELECT
+  at.ArtistID,
+  at.Name ArtistName,
+  mt.Name MediaTypeName,
+  SUM(il.Quantity) Downloads_Purchased
+FROM Artist at
+JOIN Album a
+  ON a.ArtistID = at.ArtistID
+JOIN track t
+  ON t.AlbumID = a.AlbumID
+JOIN genre g
+  ON g.GenreID = t.GenreID
+JOIN MediaType mt
+  ON mt.MediaTypeID = t.MediaTypeID
+JOIN InvoiceLine il
+  ON il.TrackID = t.TrackID
+WHERE MediaTypeName LIKE '%Video%'
+GROUP BY 1;
+
+
+/*Query2 - Second Insight - Top 10 Sales Total by Genre*/
+SELECT
+  g.Name,
+  SUM(il.Quantity * il.UnitPrice) SalesTotal
+FROM Genre g
+JOIN Track t
+  ON t.GenreID = g.GenreID
+JOIN InvoiceLine il
+  ON t.TrackID = il.TrackID
+JOIN Invoice i
+  ON i.InvoiceID = il.InvoiceID
+GROUP BY 1
+ORDER BY SalesTotal DESC
+LIMIT 10;
+
+
+/*Query3 - Third Insight - Largest, Smallest, and Tracks near average*/
+SELECT
+  t.Name TrackName,
+  mt.Name MediaTypeName,
+  t.Bytes Bytes
+FROM Track t
+JOIN MediaType mt
+  ON mt.MediaTypeid = t.MediaTypeid
+WHERE Bytes = (SELECT
+  MAX(Bytes)
+FROM track t)
+OR Bytes = (SELECT
+  MIN(t.Bytes)
+FROM track t)
+UNION ALL
+SELECT
+  t.Name TrackName,
+  mt.Name MediaTypeName,
+  t.Bytes Bytes
+FROM Track t
+JOIN MediaType mt
+  ON mt.MediaTypeid = t.MediaTypeid
+WHERE bytes BETWEEN '30000000' AND '35000000'
+ORDER BY 3 DESC;
+
+
+/*Query4 - Fourth Insight - 2010 Sales Numbers by Rep*/
+SELECT
+  e.EmployeeID,
+  substr(i.InvoiceDate, 1, 4) AS Year,
+  e.FirstName,
+  e.LastName,
+  SUM(i.Total) Total
+FROM Invoice i
+JOIN Customer c
+  ON c.CustomerID = i.CustomerID
+JOIN Employee e
+  ON e.EmployeeID = c.SupportRepID
+WHERE Year IN ('2010')
+GROUP BY 1;
+
+
+/*Query5 - Fifth Insight - Top Sales Rep by Year*/
+SELECT
+  t3.Year,
+  t3.FirstName,
+  t3.LastName,
+  t3.Total
+FROM (SELECT
+  Year,
+  MAX(Total) Total
+FROM (SELECT
+  e.FirstName FirstName,
+  e.LastName LastName,
+  substr(i.InvoiceDate, 1, 4) AS Year,
+  SUM(i.total) Total
+FROM Invoice i
+JOIN Customer c
+  ON c.CustomerID = i.CustomerID
+JOIN Employee e
+  ON e.EmployeeID = c.SupportRepID
+GROUP BY 1,
+         2,
+         3) t1
+GROUP BY 1) t2
+JOIN (SELECT
+  e.FirstName FirstName,
+  e.LastName LastName,
+  substr(i.InvoiceDate, 1, 4) AS Year,
+  SUM(i.total) Total
+FROM Invoice i
+JOIN Customer c
+  ON c.CustomerID = i.CustomerID
+JOIN Employee e
+  ON e.EmployeeID = c.SupportRepID
+GROUP BY 1,
+         2,
+         3) t3
+  ON t3.Year = t2.Year
+  AND t3.Total = t2.Total
+ORDER BY t3.Year;
+
+
+
